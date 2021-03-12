@@ -1,0 +1,105 @@
+Parallel Lab README
+Attiano Purpura-Pontoniere - attiano@ucla.edu
+6/4/2020
+
+The purpose of this lab was to give a hands-on introduction to optimizing poorly written c code from sequential.c to parallel.c using openMP multi-threading and example optimizations shown in class, specifically loop un-rolling, tiling, code elimination, code motion, code re-use, strength reduction. Grading is accomplished by using a perl script that creates a temporary directory within each student's turned in copy of parallel.c is tested for correctness and speed-up and all scores are compiled into a scores.txt file with columns for uid, score, and extra credit seperated by spaces. Correctness is determined by checking the printf behavior of each function, making sure the final data in each array passed into the parallel and sequential portion match, and checking the return value with a tolerance of +/- .005. If a TA wanted to add new code to be parallelized by students, they would update all copies of parallel.c and sequential.c to have the new code to be parallelized, the solution version of parallel.c should be updated with the solution version of the new code addded. The main.c version of the grading script should then be updated to have correctness checks for the new code based on the solution.
+
+KEY POINTS OF CONFUSION FROM STUDENTS:
+
+1. The output from student_copy doesn't neccesarily imply full correctness points. They could comment out the fibonacci code for example and it wouldn't affect the output but would of course result in an illegal speed up. This can be easily avoided if students are given the grading copy of main.c, or at least a copy of main.c with all the testing structure but the constants should be changed to prevent illegal optimizations.
+
+2. Different linux servers have different builds, and will result in different observed speedups depending on server and load on server. This unfortunately doesn't have a clear fix, and as such benchmarking needs to be done for the solution version to base the scoring rubric off.
+
+3. Students didnt know where to focus efforts on parallelizing and what type of optimizations to focus on/was allowed by correctness check. To help easily with this the spec could exhaustively detail all the types of optimizations we covered. 
+
+4. Students were concerned with correctness as you would get 0 points immediately if you made one error. 
+
+5. There was confusion initially over the spec's description of make Test/ Make clean, however this should be cleared in the latest version of the spec.
+
+
+POSSIBLE FUTURE IMRPOVEMENTS:
+
+1. IMPORTANT: make sure the output in student_copy of main.c neccesarily implies full correctness points, or communicate clearly through the spec that it doesn't and students need to reliably parallelize the code on their own. Could also include final score calculation output in student_copy of main.c.
+
+2. Split loops into individual functions so students can use gprof to profile their code and determine where to focus their parallelizing efforts.
+
+3. Add capability for calculating partial correctness points, in the grading version of main.c there should be a comment on a location within the testing structure where one could easily give points for the number of errors. However those errors would not be weighed equally between different loops, one could weigh numWrong from each loop, the printf behavior check, and the return value check seperately. Also one can structure the printf/return value behavior to be more or less important for correctness by including more or less stuff in the return value/printf check.
+
+4. Add checking for memory leaks to the grading script pipeline through the perl files & a deeper understanding of the makefile.
+
+
+The following describes at a high level the point of each file in this folder ->
+
+FOLDERS/files:
+	
+	readme: this file
+	
+	STUDENT_COPY:
+		main.c: student copy of main.c, driver code for Test executeable compiled by the makefile, calculates and outputs speedup as well as output that was intended to be a guide for correctness but not neccesarily imply correctness. Speedup is determined by time taken in main.c for work_it_seq() function that calls the code in sequential.c and work_it_par() that calls the code in parallel.c.
+		makefile: student copy of makefile to compile code and clean up after code. Also looks like there is the potential for checking for memory leaks through gmon.out.
+		parallel.c: student copy of parallel.c, this should be the only file students have to change/upload, and would include their changes to speed up the code in sequential.c
+		sequential.c: student copy of sequential.c which is a reference copy of the original implementation used as a reference point for speedup calculation in main.c.
+		utils.h: student copy of utils.h which is a header file defining a set of 
+	
+	GRADING:
+	
+		config.pm: perl configuration file contains defintions for src/handin directories
+			
+		grade_20.pl: perl grading script, run through linux console with ./grade_20.pl -> this script iterates over every single folder in the handin directory. It assumes the handin dir has a folder labeled by UID for each submission with only parallel.c in each folder. For each student submitted parallel.c, the script creates a temporary directory and imports all files in the src excluding parallel.c, and instead imports the student's copy over. The script then checks to see if the code compiles, if it compiles it then runs the code with the grading version of main.c from the src directory, and takes the final score output by main.c in "score.txt" and appends it to a "scores.txt" file that has the final grades for all submissions.
+	
+		HANDIN: Contains folders named by UID, each folder contains soley a student's turned in copy of parallel.c. One can download all parallel lab submissions from CCLE by going to the assigment, and selecting "Download all UID submissions" in the "Grading action" drop-down bar. It comes in a zip file that can then be uploaded and unzipped in the handin folder on the linux server.
+		
+		SRC:
+			main.c: grading version of main.c, the constants should be changed to ensure the testing strucutre doesn't allow illegal optimizations. Main.c has following testing structure to evaluate correctness and score ->
+				CORRECTNESS:
+				
+					1. printf behavior -> this is accomplished by re-directing stdout to a "seq.txt" and "par.txt" before calling work_it_seq/par()
+										  the contents of "seq.text" and "par.txt" are then compared, and if there is a mismatch on a line, and there is no '.' on that line to imply there is a float value (for which we need to account for the +/- .005 tolerance in the spec) then there is  a difference in the sequential and parallel printf behavior. The floats are checked by the return value.
+										  
+					2. return value -> Check both work_it_seq/par() return values within a +/- .005 tolerance for the pi loops float values: if( (result <= result0 && result0 <=(result+.005)) || ((result-.005) <= result0 && result0 <=result) )
+					
+					3. final data matches -> malloc a copy of each array passed into work_it_seq/par() and just loop over each array, comparing the seq/par data stored at each index in both arrays making sure they match, and counting the number that dont match.
+					
+					You can comment out the data manipulated by each loop under testing strucutre. Currently the return value and fibonacci checks are not included as it wasn't clearly communicated to students that the output from the first version of student_copy wouldn't imply the data was neccesarily manipulated correctly.
+					
+				SCORE: determined at the end of testing strucutre based on speed-up, errors, and if-else chain that checks which bounds specified 
+				by the spec students fall into. Calculated based on best speed_up out of 5 runs if output is fully correct, otherwise 0. The final score is output to a score.txt file with a single line with the score and extra credit float values seperated by a space and followed by a newline character.
+				
+			makefile: grading verison of makefile, different from student_copy for make clean
+			parallel.c: grading version of parallel.c, unused and irrelevant
+			sequential.c: grading version of sequential.c, should match student_copy, used as a refernce point also for correctness.
+			utils.h: grading version of utils.h, values can be overwritten in main.c so can match student_copy or not
+		
+	SOLN:
+		parallel.c: solution version of parallel.c, achieves >10x speedup.
+		
+	SPEC:
+		correct_output.png: image copy of what correct output looks like for example output in pdf made from the tex file
+		cs33_parallel_lab.pdf: spec given to students, uploaded to CCLE. Contains more information on how lab is structured. Should be read after this as it details the student's persepctive on the lab.
+		parallel_lab.tex: latex code for that can be used to create CS33_Parallel_Lab.pdf through Overleaf
+	
+
+
+The following describes at a high level the point of each loop in parallel.c ->
+
+	SUPER SIMPLE: Opportunity for OPENMP mult-threading. students should notice that it can be easily multi-threaded, easiest problem, supposed to be an increasing gradient of difficulty and trickiness.
+
+	DOT PRODUCT MOVING AVERAGE: Opportunity for OPENMP multi-threading accumulation/reduction, and code elimation. Students should notice that moving average is set to 0 on the last iteration and the moving average sub-loop can be removed, and the rest can be parallelized through openMP reduction. Or alternatively if you dont want this to be a code elimation opportunity you can hoist the reset of moving average out of the loop.
+
+	FIBONACCI: Opportunity for code elimination. Supposed to be clearly sequential code and so not much parallelism to exploit, meant as a red herring type trick, however the check and printf can be removed from the loop, and 5 can be directly passed in as a_secret value.
+
+	RIEMANN PI: Opportunity for OPENMP mult-threading accumulation/reduction, but meant to be an intermediate difficulty comparable to Monte Carlo pi
+
+	MONTE CARLO PI: Opportunity for OPENMP mult-threading accumulation/reduction, but meant to be an intermediate difficulty, comparable to Riemann pi
+
+SPRING 2019 TA CREATED THE FOLLOWING LOOPS AND DIDN'T RESPOND TO EMAIL, SO THIS IS THE INTENTION I WAS ABLE TO INFER FROM IT:
+
+	AGGR: Opportunity for OPENMP mult-threading accumulation/reduction, tiling, loop unrolling, code motion, and code re-use. Higher level difficulty but less than last two loops.
+
+	NEW: Opportunity for OPENMP mult-threading accumulation/reduction, loop unrolling, tiling, code re-use,  and combining the NEW loop with this loop.
+
+	HISTOGRAMMY: Opportunity for OPENMP mult-threading, loop unrolling, tiling, code re-use, strength reduction and combining the NEW loop with this loop.
+	
+	
+NOTES:
+	please see "Notes" section of cs33_parallel_lab.pdf to see notes about lab. Such as a DIM utils.h value greater than 1000 leading to immediate segfault due to too much heap allocation. 2^5*(DIM^3) bytes specifically for the last 3 loops made by Spr2019 TA.
